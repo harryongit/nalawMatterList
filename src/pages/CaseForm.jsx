@@ -35,8 +35,6 @@ const saveCase = async ({ id, formData, oldNextDate }) => {
   } else {
     const newDoc = await addDoc(collection(db, 'masterCases'), {
       ...formData,
-      calendarSynced: false,
-      eventId: '',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });

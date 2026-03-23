@@ -1,9 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { db } from '../firebase/config';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { startOfWeek, endOfWeek, addDays, format, isWithinInterval, parseISO } from 'date-fns';
 import CaseLogDialog from '../components/CaseLogDialog';
@@ -27,21 +26,11 @@ const fetchCasesAndClients = async () => {
   return { cases, clients };
 };
 
-const pushToCalendar = async (caseItem) => {
-  const url = 'https://us-central1-nalaw-matterapp.cloudfunctions.net/pushToCalendar'; // Replace with your actual URL
-  await axios.post(url, {
-    caseId: caseItem.id,
-    caseName: caseItem.caseName,
-    nextDate: caseItem.nextDate,
-  });
-};
-
 const Dashboard = () => {
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState('all');
   const [selectedCase, setSelectedCase] = useState(null);
   const [logDialogOpen, setLogDialogOpen] = useState(false);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', type: 'success' });
 
   const { data, isLoading, isError } = useQuery({ 
     queryKey: ['casesAndClients'], 
@@ -49,17 +38,6 @@ const Dashboard = () => {
   });
 
   const { cases = [], clients = {} } = data || {};
-
-  const syncMutation = useMutation({
-    mutationFn: pushToCalendar,
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries(['casesAndClients']);
-      setSnackbar({ open: true, message: 'Successfully synced to calendar!', type: 'success' });
-    },
-    onError: (error) => {
-      setSnackbar({ open: true, message: `Error: ${error.response?.data?.error || error.message}`, type: 'error' });
-    },
-  });
 
   const filteredCases = useMemo(() => {
     const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -150,7 +128,6 @@ const Dashboard = () => {
               <th className="py-3 px-4 text-left text-gray-600 font-semibold">Next Date</th>
               <th className="py-3 px-4 text-left text-gray-600 font-semibold">Court</th>
               <th className="py-3 px-4 text-center text-gray-600 font-semibold">Status</th>
-              <th className="py-3 px-4 text-center text-gray-600 font-semibold">Calendar Sync</th>
               <th className="py-3 px-4 text-right text-gray-600 font-semibold">Actions</th>
             </tr>
           </thead>
@@ -166,19 +143,6 @@ const Dashboard = () => {
                     {caseItem.status}
                   </span>
                 </td>
-                <td className="py-3 px-4 text-center">
-                  {caseItem.calendarSynced ? (
-                    <span className="text-green-600 font-semibold">Synced ✅</span>
-                  ) : (
-                    <button 
-                      onClick={() => syncMutation.mutate(caseItem)}
-                      disabled={syncMutation.isLoading && syncMutation.variables?.id === caseItem.id}
-                      className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 disabled:bg-gray-400"
-                    >
-                      {syncMutation.isLoading && syncMutation.variables?.id === caseItem.id ? 'Syncing...' : 'Push'}
-                    </button>
-                  )}
-                </td>
                 <td className="py-3 px-4 text-right space-x-2">
                   <button onClick={() => { setSelectedCase(caseItem); setLogDialogOpen(true); }} className="text-gray-500 hover:underline">Logs</button>
                   <Link to={`/cases/edit/${caseItem.id}`} className="text-blue-500 hover:underline">Edit</Link>
@@ -190,14 +154,6 @@ const Dashboard = () => {
       </div>
 
       <CaseLogDialog open={logDialogOpen} onClose={() => setLogDialogOpen(false)} caseItem={selectedCase} />
-
-      {/* Snackbar */}
-      {snackbar.open && (
-        <div className={`fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white ${snackbar.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
-          {snackbar.message}
-          <button onClick={() => setSnackbar({ ...snackbar, open: false })} className="ml-4 font-bold">X</button>
-        </div>
-      )}
     </div>
   );
 };
