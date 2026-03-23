@@ -13,9 +13,9 @@ const db = admin.firestore();
 // MS Graph Configuration (Replace with actual values or use functions.config())
 const msalConfig = {
   auth: {
-    clientId: process.env.MS_CLIENT_ID,
-    authority: `https://login.microsoftonline.com/${process.env.MS_TENANT_ID}`,
-    clientSecret: process.env.MS_CLIENT_SEC,
+    clientId: import.meta.env.VITE_MS_CLIENT_ID,
+    authority: `https://login.microsoftonline.com/${import.meta.env.VITE_MS_TENANT_ID}`,
+    clientSecret: import.meta.env.VITE_MS_CLIENT_SEC,
   }
 };
 
